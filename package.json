@@ -1,0 +1,42 @@
+{
+  "name": "@dhmk/atom",
+  "version": "0.0.1",
+  "description": "Lightweight mobx-like observable values, computed values and side-effects",
+  "keywords": [
+    "atom",
+    "observable",
+    "observer",
+    "reactive",
+    "computed",
+    "dependency",
+    "state",
+    "mobx"
+  ],
+  "license": "MIT",
+  "repository": "github:dhmk083/dhmk-atom",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "module": "esm/index.js",
+  "sideEffects": false,
+  "files": [
+    "lib",
+    "esm"
+  ],
+  "scripts": {
+    "preversion": "yarn test && yarn build",
+    "version": "git add -A",
+    "postversion": "git push && git push --tags",
+    "clean": "rm -rf lib esm",
+    "build": "yarn clean && tsc && tsc -m esnext --outDir esm",
+    "test": "yarn clean && jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^26.6.3",
+    "ts-jest": "^26.5.6",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "@dhmk/utils": "^2.0.0"
+  }
+}
