@@ -24,7 +24,13 @@ type AtomOptions = {
   eq: (oldValue, newValue) => boolean;
   onBecomeObserved: () => void;
   onBecomeUnobserved: () => void;
+  setter: (originalSetter: Setter<T>) => Setter<T>;
 };
+
+type Setter<T> = (value: T) => ValueChanged | ValueNotChanged;
+
+type ValueChanged = true;
+type ValueNotChanged = false;
 ```
 
 ### `atom(value: T, opts?: AtomOptions): WritableAtom<T>`
@@ -82,7 +88,7 @@ Runs `fn` without tracking any atoms which are read during its execution. Return
 
 ### `runInAction(fn: () => T): T`
 
-Runs `fn` in transaction. Returns `fn` result. Doesn't apply `untracked`.
+Runs `fn` in transaction. Returns `fn` result. Also applies `untracked`.
 
 ### `runInFlow(flow)`
 
@@ -91,3 +97,21 @@ Runs `flow` in transaction. Returns its result. See [@dhmk/utils](https://github
 ### `atTransactionEnd(fn)`
 
 Runs `fn` at the end of the outermost transaction or immediately if is not in transaction.
+
+## Helpers
+
+### `keepAlive(computed: Atom<T>): Atom<T> & { dispose() }`
+
+Similar to MobX, if a computed atom isn't observed by anyone, its value is recomputed on every access. This function is a shorcut to `observe(computed)`.
+
+### `objectAtom()`
+
+### `arrayAtom()`
+
+### `mapAtom()`
+
+### `setAtom()`
+
+### `asyncAtom()`
+
+### `debouncedEvents()`

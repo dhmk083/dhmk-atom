@@ -295,25 +295,27 @@ export class _Atom<T> {
   }
 }
 
-export const isAtom = (x: any) => x && x.atom instanceof _Atom;
+// export const isAtom = (x: any) => x && x.atom instanceof _Atom;
 
-export const isValue = (x: any): x is Atom<any> => isAtom(x) && !x.atom.fn;
+// export const isValue = (x: any): x is Atom<any> => isAtom(x) && !x.atom.fn;
 
-export const isComputed = (x: any): x is Atom<any> =>
-  isAtom(x) && !!x.atom.fn && !x.atom.isSideEffect;
+// export const isComputed = (x: any): x is Atom<any> =>
+//   isAtom(x) && !!x.atom.fn && !x.atom.isSideEffect;
 
-export const isObserve = (x: any): x is Observer =>
-  isAtom(x) && !!x.atom.fn && x.atom.isSideEffect;
+// export const isObserve = (x: any): x is Observer =>
+//   isAtom(x) && !!x.atom.fn && x.atom.isSideEffect;
+
+const id = (x) => x;
 
 export function atom<T>(fn: () => T, options?: AtomOptions<T>): Atom<T>;
 export function atom<T>(x: T, options?: AtomOptions<T>): WritableAtom<T>;
 export function atom(arg, opts?) {
-  const a =
-    typeof arg === "function"
-      ? new _Atom(undefined, arg, false, opts)
-      : new _Atom(arg, undefined, false, opts);
+  const isComputed = typeof arg === "function";
+  const a = isComputed
+    ? new _Atom(undefined, arg, false, opts)
+    : new _Atom(arg, undefined, false, opts);
   const self: any = a.get.bind(a);
-  if (a.set) self.set = a.set.bind(a);
+  if (!isComputed) self.set = (opts?.setter || id)(a.set.bind(a));
   self.get = self.toString = self.toJSON = self.valueOf = self;
   self.atom = a; // for is...() checks
   return self;
@@ -376,7 +378,7 @@ export function observe(fn, opts?) {
 }
 
 export function untracked<T>(fn: () => T) {
-  let prevObserver = g_currentObserver;
+  const prevObserver = g_currentObserver;
   g_currentObserver = null;
 
   try {
@@ -430,8 +432,10 @@ export type NotAtom<T> = T & { readonly [AtomTag]?: never };
 type ValueChanged = true;
 type ValueNotChanged = false;
 
+type Setter<T> = (value: T) => ValueChanged | ValueNotChanged;
+
 export interface WritableAtom<T> extends Atom<T> {
-  set(value: T): ValueChanged | ValueNotChanged;
+  set: Setter<T>;
 }
 
 export interface Observer {
@@ -446,6 +450,7 @@ export type AtomOptions<T> = Readonly<
     eq: (a: T, b: T) => boolean;
     onBecomeObserved: () => void;
     onBecomeUnobserved: () => void;
+    setter: (originalSetter: Setter<T>) => Setter<T>;
   }>
 >;
 

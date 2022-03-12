@@ -1,12 +1,10 @@
-import { atom, isAtom, observe, runInAction } from "./atom";
+import { atom, observe, runInAction } from "./atom";
 
 describe("atom", () => {
   test("basic", () => {
     const a = atom(1);
     const b = atom(() => a() + 1);
 
-    expect(isAtom(a)).toEqual(true);
-    expect(isAtom(b)).toEqual(true);
     expect(a()).toEqual(1);
     expect(b()).toEqual(2);
 

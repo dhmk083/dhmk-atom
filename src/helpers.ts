@@ -6,6 +6,7 @@ import {
   NotAtom,
   atTransactionEnd,
   observe,
+  AtomOptions,
 } from "./atom";
 
 export interface ObjectAtom<T> extends WritableAtom<T> {
@@ -13,8 +14,11 @@ export interface ObjectAtom<T> extends WritableAtom<T> {
   merge(arg: (prev: T) => Partial<T>): void;
 }
 
-export function objectAtom<T extends object>(value: T): ObjectAtom<T> {
-  const a: any = atom(value);
+export function objectAtom<T extends object>(
+  value: T,
+  options?: AtomOptions<T>
+): ObjectAtom<T> {
+  const a: any = atom(value, options);
 
   a.merge = (what) => {
     a.set(object.merge(a(), what));
@@ -39,8 +43,11 @@ export interface ArrayAtom<T> extends WritableAtom<ReadonlyArray<T>> {
   ): void;
 }
 
-export function arrayAtom<T>(value: ReadonlyArray<T> = []): ArrayAtom<T> {
-  const a: any = atom(value);
+export function arrayAtom<T>(
+  value: ReadonlyArray<T> = [],
+  options?: AtomOptions<ReadonlyArray<T>>
+): ArrayAtom<T> {
+  const a: any = atom(value, options);
   const _set = a.set;
 
   a.set = (...args) => {
@@ -73,9 +80,10 @@ export interface MapAtom<K, V> extends Atom<ReadonlyMap<K, V>> {
 }
 
 export function mapAtom<K, V>(
-  value: ReadonlyMap<K, V> = new Map()
+  value: ReadonlyMap<K, V> = new Map(),
+  options?: AtomOptions<ReadonlyMap<K, V>>
 ): MapAtom<K, V> {
-  const a: any = atom(value);
+  const a: any = atom(value, options);
   const _set = a.set;
 
   a.set = (...args) => {
@@ -101,8 +109,11 @@ export interface SetAtom<T> extends WritableAtom<ReadonlySet<T>> {
   clear(): void;
 }
 
-export function setAtom<T>(value: ReadonlySet<T> = new Set()): SetAtom<T> {
-  const a: any = atom(value);
+export function setAtom<T>(
+  value: ReadonlySet<T> = new Set(),
+  options?: AtomOptions<ReadonlySet<T>>
+): SetAtom<T> {
+  const a: any = atom(value, options);
 
   a.add = (v) => a.set(set.add(a(), v));
 
@@ -115,13 +126,14 @@ export function setAtom<T>(value: ReadonlySet<T> = new Set()): SetAtom<T> {
 
 export function asyncAtom<T = any>(
   fn: (prev: T) => Promise<T>,
-  initial: T
+  initial: T,
+  options?: AtomOptions<T>
 ): Atom<T>;
 export function asyncAtom<T = any>(
   fn: (prev?: T) => Promise<T>
 ): Atom<T | undefined>;
-export function asyncAtom<T>(fn, initial?: T) {
-  const a = atom(initial);
+export function asyncAtom<T>(fn, initial?: T, options?) {
+  const a = atom(initial, options);
   let c = { cancelled: false };
 
   return () => {
@@ -160,7 +172,11 @@ export function debouncedEvents(onBO: Function, onBUO: Function) {
   };
 }
 
-export const keepAlive = (a: Atom<any>): Function => observe(() => a());
+export const keepAlive = <T>(a: Atom<T>): Atom<T> & { dispose() } => {
+  const self = () => a();
+  self.dispose = observe(self);
+  return self as any;
+};
 
 // const mappedItems = atom(cacheMap(() => items, x => y));
 
