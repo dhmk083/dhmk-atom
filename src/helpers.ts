@@ -173,8 +173,12 @@ export function debouncedEvents(onBO: Function, onBUO: Function) {
 }
 
 export const keepAlive = <T>(a: Atom<T>): Atom<T> & { dispose() } => {
-  const self = () => a();
-  self.dispose = observe(self);
+  let d;
+  const self = () => {
+    if (!d) d = observe(a);
+    return a();
+  };
+  self.dispose = () => d?.();
   return self as any;
 };
 
