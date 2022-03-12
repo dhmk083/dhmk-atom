@@ -307,7 +307,7 @@ export class _Atom<T> {
 
 const id = (x) => x;
 
-export function atom<T>(fn: () => T, options?: AtomOptions<T>): Atom<T>;
+export function atom<T>(fn: () => T, options?: ComputedAtomOptions<T>): Atom<T>;
 export function atom<T>(x: T, options?: AtomOptions<T>): WritableAtom<T>;
 export function atom(arg, opts?) {
   const isComputed = typeof arg === "function";
@@ -453,6 +453,8 @@ export type AtomOptions<T> = Readonly<
     setter: (originalSetter: Setter<T>) => Setter<T>;
   }>
 >;
+
+export type ComputedAtomOptions<T> = Omit<AtomOptions<T>, "setter">;
 
 export type ObserverOptions = Readonly<
   Partial<{
