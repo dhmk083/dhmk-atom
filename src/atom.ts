@@ -464,7 +464,15 @@ export type ObserverOptions = Readonly<
   }>
 >;
 
-type Primitive = undefined | null | boolean | string | number | Function;
+type Primitive =
+  | undefined
+  | null
+  | boolean
+  | string
+  | number
+  | Function
+  | Date
+  | RegExp;
 
 export type DeepReadonly<T> = T extends Atom<infer R>
   ? Atom<DeepReadonly<R>>
@@ -476,4 +484,16 @@ export type DeepReadonly<T> = T extends Atom<infer R>
   ? ReadonlySet<DeepReadonly<T>>
   : {
       readonly [P in keyof T]: DeepReadonly<T[P]>;
+    };
+
+export type DeepWritable<T> = T extends Atom<infer R>
+  ? WritableAtom<R>
+  : T extends Primitive
+  ? T
+  : T extends Map<infer K, infer V>
+  ? ReadonlyMap<DeepWritable<K>, DeepWritable<V>>
+  : T extends Set<infer T>
+  ? ReadonlySet<DeepWritable<T>>
+  : {
+      readonly [P in keyof T]: DeepWritable<T[P]>;
     };
