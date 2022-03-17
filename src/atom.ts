@@ -487,7 +487,7 @@ export type DeepReadonly<T> = T extends Atom<infer R>
     };
 
 export type DeepWritable<T> = T extends Atom<infer R>
-  ? WritableAtom<R>
+  ? WritableAtom<DeepWritable<R>>
   : T extends Primitive
   ? T
   : T extends Map<infer K, infer V>
