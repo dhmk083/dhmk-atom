@@ -422,7 +422,7 @@ export const asAtom = <T>(x: () => T): Atom<T> => x as Atom<T>;
 
 // ---------------- types
 
-const AtomTag = "__$$unique_name$$__";
+const AtomTag = "__$$dhmk_atom$$__";
 
 // plain functions should not be confused with atoms, use type cast if desired
 export type Atom<T> = (() => T) & { readonly [AtomTag]: typeof AtomTag };
