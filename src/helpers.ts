@@ -10,8 +10,9 @@ import {
 } from "./atom";
 
 export interface ObjectAtom<T> extends WritableAtom<T> {
-  merge(arg: Partial<T>): void;
+  merge(arg: (prev: T) => T): void; // helpful for immer, must come first
   merge(arg: (prev: T) => Partial<T>): void;
+  merge(arg: Partial<T>): void;
 }
 
 export function objectAtom<T extends object>(

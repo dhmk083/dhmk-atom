@@ -402,6 +402,9 @@ export function runInAction<T>(fn: () => T) {
   }
 }
 
+// convenient alias
+export const run = runInAction;
+
 // export function action<A extends unknown[], T>(fn: (...args: A) => T) {
 //   return function (...args: A) {
 //     return runInAction(() => fn(...args));
