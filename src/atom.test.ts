@@ -1,4 +1,4 @@
-import { atom, observe, runInAction } from "./atom";
+import { atom, observe, act } from "./";
 
 describe("atom", () => {
   test("basic", () => {
@@ -8,7 +8,7 @@ describe("atom", () => {
     expect(a()).toEqual(1);
     expect(b()).toEqual(2);
 
-    a.set(2);
+    act(() => a.set(2));
 
     expect(a()).toEqual(2);
     expect(b()).toEqual(3);
@@ -25,14 +25,14 @@ describe("atom", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    a.set(3); // b = 1
+    act(() => a.set(3)); // b = 1
     c();
 
     expect(spy).toBeCalledTimes(1);
 
-    a.set(5); // b = 0
+    act(() => a.set(5)); // b = 0
     c();
-    a.set(6); // b = 0
+    act(() => a.set(6)); // b = 0
     c();
 
     expect(spy).toBeCalledTimes(2);
@@ -58,7 +58,7 @@ describe("atom", () => {
     expect(computeSpy).toBeCalledTimes(1);
     expect(observeSpy).toBeCalledTimes(1);
 
-    a.set(2);
+    act(() => a.set(2));
 
     expect(d()).toEqual(23);
     expect(computeSpy).toBeCalledTimes(2);
@@ -77,7 +77,7 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(0);
 
     // irrelevant
-    a.set(2);
+    act(() => a.set(2));
 
     expect(onBOspy).toBeCalledTimes(0);
     expect(onBUOspy).toBeCalledTimes(0);
@@ -89,7 +89,7 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(0);
 
     // irrelevant
-    a.set(3);
+    act(() => a.set(3));
 
     expect(onBOspy).toBeCalledTimes(1);
     expect(onBUOspy).toBeCalledTimes(0);
@@ -107,7 +107,7 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(1);
 
     // irrelevant
-    a.set(4);
+    act(() => a.set(4));
 
     expect(onBOspy).toBeCalledTimes(1);
     expect(onBUOspy).toBeCalledTimes(1);
@@ -123,24 +123,6 @@ describe("atom", () => {
 
     expect(onBOspy).toBeCalledTimes(2);
     expect(onBUOspy).toBeCalledTimes(2);
-
-    // in batch (right now it ignores batching and calls BO/BUO immediately)
-    runInAction(() => {
-      const d3 = observe(a);
-      d3();
-
-      expect(onBOspy).toBeCalledTimes(3);
-      expect(onBUOspy).toBeCalledTimes(3);
-
-      const d4 = observe(a);
-      d4();
-
-      expect(onBOspy).toBeCalledTimes(4);
-      expect(onBUOspy).toBeCalledTimes(4);
-    });
-
-    expect(onBOspy).toBeCalledTimes(4);
-    expect(onBUOspy).toBeCalledTimes(4);
   });
 });
 
@@ -156,8 +138,8 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    a.set(2);
-    b.set(3);
+    act(() => a.set(2));
+    act(() => b.set(3));
 
     expect(spy).toBeCalledTimes(3);
   });
@@ -175,11 +157,27 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(2);
 
-    a.set(3);
+    act(() => a.set(3));
     expect(spy).toBeCalledTimes(3);
 
-    a.set(10);
+    act(() => a.set(10));
     expect(spy).toBeCalledTimes(5);
+
+    const b = atom(1);
+    const c = atom(() => b().toString().length);
+    let once = false;
+
+    observe(() => {
+      if (!once) {
+        once = true;
+        b.set(2);
+      }
+
+      c();
+      spy();
+    });
+
+    expect(spy).toHaveBeenCalledTimes(6);
   });
 
   test("dispose", () => {
@@ -192,8 +190,8 @@ describe("observe", () => {
       spy();
     });
 
-    a.set(2);
-    a.set(3);
+    act(() => a.set(2));
+    act(() => a.set(3));
     expect(spy).toBeCalledTimes(1);
 
     const d = observe(() => {
@@ -202,15 +200,15 @@ describe("observe", () => {
     });
 
     d();
-    a.set(4);
-    a.set(5);
+    act(() => a.set(4));
+    act(() => a.set(5));
     expect(spy).toBeCalledTimes(2);
   });
 
   test("custom async scheduler", (done) => {
     const a = atom(1);
     const spy = jest.fn();
-    let sch = (x) => x();
+    let sch = (x: any) => x();
 
     observe(
       () => {
@@ -230,7 +228,7 @@ describe("observe", () => {
           setTimeout(() => {
             // 1. now, observe will run outside `runPendingAtoms` (and batching)
             sch = (x) => setTimeout(x);
-            a.set(10);
+            act(() => a.set(10));
           });
         }
 
@@ -245,7 +243,7 @@ describe("observe", () => {
         spy();
       },
       {
-        scheduler: (run) => sch(run),
+        scheduler: (run: any) => sch(run),
       }
     );
   });
@@ -260,19 +258,19 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    runInAction(() => {
-      d.invalidate(false);
+    act(() => {
+      d.invalidate(/*false*/);
       expect(spy).toBeCalledTimes(1);
 
-      d.invalidate(true);
-      expect(spy).toBeCalledTimes(2);
+      d.invalidate(/*true*/);
+      expect(spy).toBeCalledTimes(1);
     });
 
     expect(spy).toBeCalledTimes(2);
   });
 });
 
-test("runInAction", () => {
+test("action", () => {
   const a = atom(1);
   const b = atom(2);
   const spy = jest.fn();
@@ -283,7 +281,7 @@ test("runInAction", () => {
 
   expect(spy).toBeCalledTimes(1);
 
-  runInAction(() => {
+  act(() => {
     a.set(2);
     b.set(3);
   });
