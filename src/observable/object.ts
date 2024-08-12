@@ -53,7 +53,7 @@ export default function observableObject<T extends object>(
 
       let a = atoms.get(p);
       if (!a) {
-        a = v[AS] ? v[AS] : new ValueAtom(creator(v, p as keyof T));
+        a = v?.[AS] ? v[AS] : new ValueAtom(creator(v, p as keyof T));
         atoms.set(p, a);
       }
       return a.get();
@@ -64,7 +64,7 @@ export default function observableObject<T extends object>(
 
       if (!a) {
         const v = t[p];
-        a = v[AS] ? v[AS] : new ValueAtom(undefined);
+        a = v?.[AS] ? v[AS] : new ValueAtom(undefined);
         atoms.set(p, a);
       }
 
