@@ -9,6 +9,7 @@ interface CurrentAtom {
   prevDepsIndex: number;
   isObserved: boolean;
   depsForUnobserved: Set<Dependency>;
+  wm: WeakMap<any, any>;
 }
 
 export const runtime = {

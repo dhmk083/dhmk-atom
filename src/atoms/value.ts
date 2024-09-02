@@ -10,7 +10,7 @@ import {
 import { runtime } from "../runtime";
 
 export class ValueAtom<T> {
-  observers = new Map<Atom, Id>();
+  observers = Array<Atom>();
   runId = new Id();
   versionId = new Id();
 
@@ -22,7 +22,7 @@ export class ValueAtom<T> {
   }
 
   invalidate() {
-    this.observers.forEach((_, a) => a.invalidate(AtomState.Stale, true));
+    this.observers.forEach((a) => a.invalidate(AtomState.Stale, true));
     runtime.runEffects();
   }
 

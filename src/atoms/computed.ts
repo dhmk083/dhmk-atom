@@ -11,7 +11,7 @@ import {
 import { runtime } from "../runtime";
 
 export class ComputedAtom<T> {
-  observers = new Map<Atom, Id>();
+  observers = Array<Atom>();
   deps = Array<Dependency>();
   prevDeps = Array<Dependency>();
   prevDepsIndex = 0;
@@ -19,6 +19,7 @@ export class ComputedAtom<T> {
   versionId = new Id();
   isObserved = false;
   depsForUnobserved = new Set<Dependency>();
+  wm = new WeakMap();
 
   protected value: unknown;
   protected isError = false;
@@ -35,7 +36,7 @@ export class ComputedAtom<T> {
     if (state > this.state) this.state = state;
 
     if (oldState === AtomState.Actual)
-      this.observers.forEach((_, a) =>
+      this.observers.forEach((a) =>
         a.invalidate(AtomState.PossiblyStale, false)
       );
   }
@@ -73,13 +74,18 @@ export class ComputedAtom<T> {
 
     for (let i = 0; i < this.deps.length; ++i) {
       const dep = this.deps[i];
-      dep.runId = this.runId;
+      // dep.runId = this.runId;
       this.depsVersions[i] = dep.versionId;
     }
 
     for (let i = this.prevDepsIndex; i < this.prevDeps.length; ++i) {
       const a = this.prevDeps[i];
-      if (a.runId !== this.runId) removeAtom(a, this);
+      // if (a.runId !== this.runId) removeAtom(a, this);
+
+      if (this.wm.get(a).runId !== this.runId) {
+        this.wm.delete(a);
+        removeAtom(a, this);
+      }
     }
 
     this.prevDeps = [];
@@ -89,7 +95,7 @@ export class ComputedAtom<T> {
       this.value = nextValue;
       this.isError = isError;
       this.versionId = new Id();
-      this.observers.forEach((_, a) => a.invalidate(AtomState.Stale, false));
+      this.observers.forEach((a) => a.invalidate(AtomState.Stale, false));
     }
   }
 

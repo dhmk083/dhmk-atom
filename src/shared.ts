@@ -2,7 +2,7 @@ import { runtime } from "./runtime";
 import { Dependency, Id } from "./types";
 
 type WithObservers = {
-  observers: Map<unknown, Id>;
+  observers: Array<any>; //Set<unknown>;
 };
 
 type Disposable = {
@@ -10,8 +10,11 @@ type Disposable = {
 };
 
 export const removeAtom = (a: WithObservers & Disposable, self: unknown) => {
-  a.observers.delete(self);
-  if (!a.observers.size) a.dispose();
+  // a.observers.delete(self);
+  // a.observers.splice(a.observers.indexOf(self));
+  a.observers = a.observers.filter((x) => x !== self);
+
+  if (!a.observers.length) a.dispose();
 };
 
 export function useAtom(a: WithObservers & Dependency) {
@@ -32,12 +35,24 @@ export function useAtom(a: WithObservers & Dependency) {
 
   if (!self.isObserved) {
     self.depsForUnobserved.add(a);
+    self.wm.set(a, { runId: {} });
     return;
   }
 
-  const cid = a.observers.get(self);
-  if (cid !== self.runId) {
-    a.observers.set(self, self.runId);
+  // const cid = a.observers.get(self);
+  // if (cid !== self.runId) {
+  //   a.observers.set(self, self.runId);
+  //   self.deps.push(a);
+  // }
+
+  let x = self.wm.get(a);
+  if (!x) {
+    x = { runId: {} };
+    self.wm.set(a, x);
+    a.observers.push(self);
+  }
+  if (x.runId !== self.runId) {
+    x.runId = a.runId = self.runId;
     self.deps.push(a);
   }
 }

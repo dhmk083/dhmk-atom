@@ -5,7 +5,7 @@ export class Id {
 export interface Dependency {
   actualize(): void;
   dispose(): void;
-  observers: Map<unknown, Id>;
+  observers: Array<any>; // Set<unknown>;
   versionId: Id;
   runId: Id;
 }
