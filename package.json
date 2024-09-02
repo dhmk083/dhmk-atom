@@ -1,6 +1,6 @@
 {
   "name": "@dhmk/atom",
-  "version": "2.0.1",
+  "version": "2.0.1-test",
   "description": "Lightweight mobx-like observable values, computed values and side-effects",
   "keywords": [
     "atom",
@@ -25,7 +25,7 @@
   "scripts": {
     "preversion": "yarn test && yarn build",
     "version": "git add -A",
-    "postversion": "git push && git push --tags",
+    "postversion": "git push origin HEAD && git push origin HEAD --tags",
     "clean": "rm -rf lib esm",
     "build": "yarn clean && tsc && tsc -m esnext --outDir esm",
     "test": "yarn clean && jest"
