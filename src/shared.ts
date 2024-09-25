@@ -14,36 +14,21 @@ export const removeAtom = (a: WithObservers & Disposable, self: unknown) => {
   if (!a.observers.size) a.dispose();
 };
 
-export function useAtom(a: WithObservers & Dependency) {
-  const self = runtime.currentAtom;
-  if (!self) return;
-
-  if (a.runId === self.runId) return;
-  a.runId = self.runId;
-
-  if (
-    self.prevDepsIndex < self.prevDeps.length &&
-    a === self.prevDeps[self.prevDepsIndex]
-  ) {
-    self.prevDepsIndex++;
-    self.isObserved ? self.deps.push(a) : self.depsForUnobserved.add(a);
-    return;
-  }
-
-  if (!self.isObserved) {
-    self.depsForUnobserved.add(a);
-    return;
-  }
-
-  const cid = a.observers.get(self);
-  if (cid !== self.runId) {
-    a.observers.set(self, self.runId);
-    self.deps.push(a);
-  }
+export function useAtom(a) {
+  const ca = runtime.currentAtom;
+  if (ca) ca.track(a);
 }
 
 export function reportError(e: unknown) {
   return () => {
     throw e;
   };
+}
+
+export function each(it, fn) {
+  while (true) {
+    const { done, value } = it.next();
+    if (done) return true;
+    if (fn(value) === false) return false;
+  }
 }

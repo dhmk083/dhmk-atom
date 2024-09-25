@@ -2,6 +2,14 @@ export class Id {
   private id!: "id"; // branded type
 }
 
+export const EID = new Id();
+
+export class Track {
+  constructor(public a?, public m?, public v?) {}
+}
+
+export const ET = new Track();
+
 export interface Dependency {
   actualize(): void;
   dispose(): void;

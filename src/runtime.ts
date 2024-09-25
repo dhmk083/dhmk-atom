@@ -12,7 +12,7 @@ interface CurrentAtom {
 }
 
 export const runtime = {
-  currentAtom: undefined as CurrentAtom | undefined,
+  currentAtom: undefined as any | undefined,
   counter: 0,
   requireAction: true,
   effects: new Set<Effect>(),

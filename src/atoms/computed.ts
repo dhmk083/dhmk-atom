@@ -1,4 +1,4 @@
-import { removeAtom, useAtom } from "../shared";
+import { removeAtom, useAtom, each } from "../shared";
 import {
   Id,
   AtomState,
@@ -7,27 +7,45 @@ import {
   _AtomOptions,
   defaultAtomOptions,
   Atom,
+  ET,
+  EID,
+  Track,
 } from "../types";
 import { runtime } from "../runtime";
 
 export class ComputedAtom<T> {
-  observers = new Map<Atom, Id>();
-  deps = Array<Dependency>();
-  prevDeps = Array<Dependency>();
-  prevDepsIndex = 0;
-  runId = new Id();
-  versionId = new Id();
-  isObserved = false;
-  depsForUnobserved = new Set<Dependency>();
+  observers;
+  t;
+  versionId;
 
-  protected value: unknown;
-  protected isError = false;
-  protected state = AtomState.Stale;
-  private depsVersions = Array<Id>();
+  protected isObserved;
   private options: _AtomOptions<T>;
 
-  constructor(private fn: () => T, options?: AtomOptions<T>) {
+  private fn;
+  private deps;
+  private dit;
+  private dt;
+  private mark;
+  protected value;
+  protected isError;
+  protected state;
+
+  constructor(fn: () => T, options?: AtomOptions<T>) {
+    this.value = undefined;
     this.options = { ...defaultAtomOptions, ...options };
+    this.observers = new Set();
+    this.t = ET;
+    this.versionId = EID;
+    this.isObserved = false;
+
+    this.fn = fn;
+    this.isError = false;
+    this.state = AtomState.Stale;
+
+    this.deps = new Map();
+    this.dit = undefined;
+    this.dt = undefined;
+    this.mark = EID;
   }
 
   invalidate(state: AtomState, isValueAtom: boolean) {
@@ -41,18 +59,15 @@ export class ComputedAtom<T> {
   }
 
   calculate() {
-    this.prevDeps = this.deps;
-    this.deps = [];
-    this.prevDepsIndex = 0;
-    this.runId = new Id();
+    const mark = (this.mark = new Id());
+    const deps = this.deps;
+    this.dit = deps.values();
 
     if (!this.isObserved && runtime.currentAtom) {
       this.isObserved = true;
       const onBO = this.options.onBecomeObserved;
       if (onBO) runtime.addEffect({ actualize: onBO });
     }
-
-    if (!this.isObserved) this.depsForUnobserved = new Set();
 
     let nextValue;
     let isError;
@@ -67,22 +82,13 @@ export class ComputedAtom<T> {
     }
     runtime.currentAtom = prevAtom;
 
-    if (!this.isObserved) this.deps = Array.from(this.depsForUnobserved);
+    each(this.dit, (t) => {
+      if (t.m !== mark) {
+        deps.delete(t);
+        removeAtom(t.a, this);
+      }
+    });
 
-    this.depsVersions.length = this.deps.length;
-
-    for (let i = 0; i < this.deps.length; ++i) {
-      const dep = this.deps[i];
-      dep.runId = this.runId;
-      this.depsVersions[i] = dep.versionId;
-    }
-
-    for (let i = this.prevDepsIndex; i < this.prevDeps.length; ++i) {
-      const a = this.prevDeps[i];
-      if (a.runId !== this.runId) removeAtom(a, this);
-    }
-
-    this.prevDeps = [];
     this.state = this.isObserved ? AtomState.Actual : AtomState.PossiblyStale;
 
     if (!this.options.equals(nextValue as T, this.value as T)) {
@@ -97,14 +103,12 @@ export class ComputedAtom<T> {
     if (this.state === AtomState.Actual) return;
 
     if (this.state === AtomState.PossiblyStale) {
-      for (let i = 0; i < this.deps.length; ++i) {
-        const dep = this.deps[i];
-        dep.actualize();
-        if (dep.versionId !== this.depsVersions[i]) {
-          this.state = AtomState.Stale;
-          break;
-        }
-      }
+      const ok = each(this.deps.values(), (t) => {
+        const a = t.a;
+        a.actualize();
+        return a.versionId === t.v;
+      });
+      if (!ok) this.state = AtomState.Stale;
     }
 
     if (this.state === AtomState.PossiblyStale) this.state = AtomState.Actual;
@@ -129,11 +133,45 @@ export class ComputedAtom<T> {
       const onBUO = this.options.onBecomeUnobserved;
       if (onBUO) runtime.addEffect({ actualize: onBUO });
 
-      for (let i = 0; i < this.deps.length; ++i) {
-        removeAtom(this.deps[i], this);
-      }
+      this.deps.forEach((_, a) => {
+        removeAtom(a, this);
+      });
+      this.deps.clear();
 
       this.state = AtomState.Stale;
     }
+  }
+
+  track(a) {
+    const deps = this.deps;
+    const mark = this.mark;
+    let t = ET;
+
+    if (a.t.m === mark) {
+      a.t.v = a.versionId;
+      return;
+    }
+
+    const dt = this.dt;
+
+    if (dt && dt.a === a) {
+      t = dt;
+      this.dt = this.dit.next().value;
+    } else {
+      t = deps.get(a);
+      if (!t) {
+        a.observers.add(this);
+
+        t = new Track(a, EID, EID);
+        deps.set(a, t);
+      }
+    }
+
+    if (t.m !== mark) {
+      t.m = mark;
+      t.v = a.versionId;
+    }
+
+    a.t = t;
   }
 }

@@ -6,19 +6,27 @@ import {
   Atom,
   Id,
   defaultAtomOptions,
+  Track,
+  ET,
+  EID,
 } from "../types";
 import { runtime } from "../runtime";
 
 export class ValueAtom<T> {
-  observers = new Map<Atom, Id>();
-  runId = new Id();
-  versionId = new Id();
-
-  private isObserved = false;
+  observers: Set<any>;
+  t: Track;
+  versionId: Id;
+  private isObserved: boolean;
   private options: _AtomOptions<T>;
+  private value: T;
 
-  constructor(private value: T, options?: AtomOptions<T>) {
+  constructor(value: T, options?: AtomOptions<T>) {
+    this.value = value;
     this.options = { ...defaultAtomOptions, ...options };
+    this.observers = new Set();
+    this.t = ET;
+    this.versionId = EID;
+    this.isObserved = false;
   }
 
   invalidate() {
