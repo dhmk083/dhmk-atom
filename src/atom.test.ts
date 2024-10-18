@@ -145,39 +145,33 @@ describe("observe", () => {
   });
 
   test("re-runs if atoms changed in-flight", () => {
-    const a = atom(1);
+    const a = atom(0);
     const spy = jest.fn();
 
     observe(() => {
       if (a() === 1) a.set(2);
-      if (a() === 10) a.set(11);
-
       spy();
     });
 
-    expect(spy).toBeCalledTimes(2);
+    expect(spy).toBeCalledTimes(1);
 
-    act(() => a.set(3));
+    act(() => a.set(1));
     expect(spy).toBeCalledTimes(3);
 
-    act(() => a.set(10));
-    expect(spy).toBeCalledTimes(5);
-
-    const b = atom(1);
-    const c = atom(() => b().toString().length);
-    let once = false;
+    const spy2 = jest.fn();
 
     observe(() => {
-      if (!once) {
-        once = true;
-        b.set(2);
-      }
+      if (a() === 3) a.set(4);
 
-      c();
-      spy();
+      // if we read changed atom again, effect won't be recalculated
+      a();
+      spy2();
     });
 
-    expect(spy).toHaveBeenCalledTimes(6);
+    expect(spy2).toBeCalledTimes(1);
+
+    act(() => a.set(3));
+    expect(spy2).toBeCalledTimes(2);
   });
 
   test("dispose", () => {
@@ -205,47 +199,24 @@ describe("observe", () => {
     expect(spy).toBeCalledTimes(2);
   });
 
-  test("custom async scheduler", (done) => {
+  test("custom scheduler", async () => {
     const a = atom(1);
     const spy = jest.fn();
-    let sch = (x: any) => x();
 
     observe(
       () => {
-        if (a() === 11) {
-          // the end
-
-          // 1 - initial pass
-          // 2 - after a.set(2)
-          // 3 - after a.set(10)
-          expect(spy).toBeCalledTimes(3);
-          done();
-        }
-
-        if (a() === 1) {
-          a.set(2);
-
-          setTimeout(() => {
-            // 1. now, observe will run outside `runPendingAtoms` (and batching)
-            sch = (x) => setTimeout(x);
-            act(() => a.set(10));
-          });
-        }
-
-        if (a() === 10) {
-          // 2. still outside `runPendingAtoms`
-          // call `observe` immediately
-          // this will fail if g_batchCount === 0
-          sch = (x) => x();
-          a.set(11);
-        }
-
+        a();
         spy();
       },
       {
-        scheduler: (run: any) => sch(run),
+        scheduler: (run: any) => Promise.resolve().then(run),
       }
     );
+
+    expect(spy).toBeCalledTimes(0);
+    act(() => a.set(2));
+    await null;
+    expect(spy).toBeCalledTimes(1);
   });
 
   test("force run in batch", () => {

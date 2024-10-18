@@ -1,4 +1,4 @@
-import { useAtom } from "../shared";
+import { useAtom, invalidate } from "../shared";
 import {
   AtomOptions,
   _AtomOptions,
@@ -13,25 +13,24 @@ import {
 import { runtime } from "../runtime";
 
 export class ValueAtom<T> {
-  observers: Set<any>;
-  t: Track;
-  versionId: Id;
-  private isObserved: boolean;
-  private options: _AtomOptions<T>;
-  private value: T;
+  value;
+  options;
+  subs;
+  vid;
+  m;
+  ti;
+  readFlag;
+  isObserved;
 
   constructor(value: T, options?: AtomOptions<T>) {
     this.value = value;
     this.options = { ...defaultAtomOptions, ...options };
-    this.observers = new Set();
-    this.t = ET;
-    this.versionId = EID;
+    this.subs = new Set();
+    this.vid = EID;
+    this.m = new Id();
+    this.ti = 0;
+    this.readFlag = false;
     this.isObserved = false;
-  }
-
-  invalidate() {
-    this.observers.forEach((_, a) => a.invalidate(AtomState.Stale, true));
-    runtime.runEffects();
   }
 
   set(x: T) {
@@ -41,8 +40,8 @@ export class ValueAtom<T> {
     if (this.options.equals(x, this.value)) return;
 
     this.value = x;
-    this.versionId = new Id();
-    this.invalidate();
+    this.vid = new Id();
+    invalidate(this.subs, 3, true);
   }
 
   actualize() {}

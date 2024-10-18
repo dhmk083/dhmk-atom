@@ -1,8 +1,8 @@
 import { ValueAtom } from "./atoms/value";
-import { ComputedAtom } from "./atoms/computed";
-import { EffectAtom } from "./atoms/effect";
+import { DerivedAtom } from "./atoms/derived";
 import { runtime } from "./runtime";
 import { AtomOptions, AtomState, EffectAtomOptions } from "./types";
+import { invalidate } from "./shared";
 import observable from "./observable";
 import observableObject, { as } from "./observable/object";
 import observableArray from "./observable/array";
@@ -16,19 +16,30 @@ type EffectState = {
 };
 
 function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
-  const ectrl: EffectState = () => ea.dispose();
+  const ectrl: EffectState = () => {
+    ea.dispose();
+    runtime.runEffects();
+  };
   ectrl.isInitial = true;
-  ectrl.invalidate = () => ea.invalidate(AtomState.Stale, false);
+  ectrl.invalidate = () => {
+    ea.state = 3;
+    invalidate(ea.subs, 3, false);
+    runtime.addEffect(ea);
+    runtime.runEffects();
+  };
 
   const efn = () => {
     fn(ectrl);
     ectrl.isInitial = false;
   };
 
-  const ea = new EffectAtom(efn, opts);
+  const ea = new DerivedAtom(efn, true, opts);
+  const origac = ea.actualize.bind(ea);
+  if (opts?.scheduler) ea.actualize = () => opts.scheduler!(origac);
   const onBO = opts?.onBecomeObserved;
   if (onBO) runtime.addEffect({ actualize: onBO });
-  ea.start();
+  runtime.addEffect(ea);
+  runtime.runEffects();
 
   return ectrl;
 }
@@ -56,7 +67,7 @@ function atom<T>(value: T, opts?: AtomOptions_<T>): WritableAtom<T> & Getter<T>;
 function atom(x, opts?) {
   const a =
     typeof x === "function"
-      ? new ComputedAtom(x, opts)
+      ? new DerivedAtom(x, false, opts)
       : new ValueAtom(x, opts);
   const self: any = a.get.bind(a);
   self.set = "set" in a ? (opts?.set ?? ((x) => x))(a.set.bind(a)) : undefined;
@@ -69,8 +80,6 @@ const untracked = act;
 
 export {
   ValueAtom,
-  ComputedAtom,
-  EffectAtom,
   atom,
   act,
   untracked,

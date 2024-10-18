@@ -9,9 +9,9 @@ type Disposable = {
   dispose(): void;
 };
 
-export const removeAtom = (a: WithObservers & Disposable, self: unknown) => {
-  a.observers.delete(self);
-  if (!a.observers.size) a.dispose();
+export const removeAtom = (a, self: unknown) => {
+  a.subs.delete(self);
+  if (!a.subs.size) a.dispose();
 };
 
 export function useAtom(a) {
@@ -31,4 +31,32 @@ export function each(it, fn) {
     if (done) return true;
     if (fn(value) === false) return false;
   }
+}
+
+export function eacha(a, fn, i = 0, s = a.length) {
+  while (i < s) fn(a[i++]);
+}
+
+export function eachar(a, fn) {
+  let i = 0,
+    s = a.length;
+  while (i < s) if (fn(a[i++]) === false) return false;
+  return true;
+}
+
+export function invalidate(as, s, iv) {
+  as.forEach((_, a) => {
+    if (iv && a.state === 4) {
+      if (a.isEffect) runtime.addEffect(a);
+      a.state = 1;
+      return;
+    }
+
+    if (a.state >= s) return;
+    a.state = s;
+
+    if (a.isEffect) runtime.addEffect(a);
+
+    a.subs.size && invalidate(a.subs, 2, iv);
+  });
 }

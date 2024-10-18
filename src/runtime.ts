@@ -26,22 +26,12 @@ export const runtime = {
 
     runtime.counter++;
 
-    const errors = Array<unknown>();
-
     runtime.effects.forEach((x) => {
       runtime.effects.delete(x);
-
-      try {
-        x.actualize();
-      } catch (e) {
-        errors.push(e);
-      }
+      x.actualize();
     });
 
     runtime.counter--;
-
-    if (errors.length)
-      throw errors.length === 1 ? errors[0] : new AggregateError(errors);
   },
 
   act<T>(fn: () => T) {
