@@ -80,6 +80,7 @@ const untracked = act;
 
 export {
   ValueAtom,
+  DerivedAtom,
   atom,
   act,
   untracked,
