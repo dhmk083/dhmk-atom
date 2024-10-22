@@ -29,7 +29,7 @@ export class ValueAtom<T> {
     this.vid = EID;
     this.m = new Id();
     this.ti = 0;
-    this.readFlag = 0;
+    this.readFlag = false;
     this.isObserved = false;
   }
 

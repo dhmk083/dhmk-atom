@@ -36,7 +36,7 @@ export class DerivedAtom {
     this.vid = EID;
     this.m = new Id();
     this.ti = 0;
-    this.readFlag = 0;
+    this.readFlag = false;
     this.isObserved = isEffect;
 
     this.state = 3;
@@ -85,46 +85,46 @@ export class DerivedAtom {
       // temp hack
       if (this.deps.length) this.deps.length = this.pdi;
 
-      // let i = 0,
-      //   deps = prevDeps,
-      //   s = deps.length,
-      //   t,
-      //   a;
+      let i = 0,
+        deps = prevDeps,
+        s = deps.length,
+        t,
+        a;
 
-      // while (i < s) {
-      //   a = deps[i++].a;
+      while (i < s) {
+        a = deps[i++].a;
+        if (a.m !== mark) removeAtom(a, this);
+        a.readFlag = false;
+      }
+
+      // eacha(prevDeps, (t) => {
+      //   const a = t.a;
       //   if (a.m !== mark) removeAtom(a, this);
       //   a.readFlag = 0;
-      // }
+      // });
 
-      eacha(prevDeps, (t) => {
-        const a = t.a;
-        if (a.m !== mark) removeAtom(a, this);
-        a.readFlag = 0;
-      });
+      i = 0;
+      deps = this.deps;
+      s = deps.length;
 
-      // i = 0;
-      // deps = this.deps;
-      // s = deps.length;
+      while (i < s) {
+        t = deps[i++];
+        a = t.a;
+        a.m = t.t;
+        if (a.readFlag) {
+          a.readFlag = false;
+          a.subs.add(this);
+        }
+      }
 
-      // while (i < s) {
-      //   t = deps[i++];
-      //   a = t.a;
+      // eacha(this.deps, (t) => {
+      //   const a = t.a;
       //   a.m = t.t;
       //   if (a.readFlag) {
       //     a.readFlag = 0;
       //     a.subs.add(this);
       //   }
-      // }
-
-      eacha(this.deps, (t) => {
-        const a = t.a;
-        a.m = t.t;
-        if (a.readFlag) {
-          a.readFlag = 0;
-          a.subs.add(this);
-        }
-      });
+      // });
 
       if (!this.options.equals(nextValue, this.value)) {
         this.value = nextValue;
@@ -154,7 +154,7 @@ export class DerivedAtom {
 
     a.m = mark;
     a.ti = ti;
-    a.readFlag = 1;
+    a.readFlag = true;
   }
 
   dispose() {
