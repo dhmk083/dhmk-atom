@@ -52,18 +52,34 @@ export class DerivedAtom {
   actualize() {
     if (this.state === 1 || this.state === 2) {
       this.recalc = false;
-      const ok = eachar(this.deps, (t) => {
-        const a = t.a;
+
+      let deps = this.deps,
+        i = deps.length,
+        t,
+        a;
+
+      while (i--) {
+        t = deps[i];
+        a = t.a;
         a.actualize();
-        return a.vid === t.v;
-      });
-      if (!ok) this.state = 3;
+        if (a.vid !== t.v) {
+          this.state = 3;
+          break;
+        }
+      }
+
+      // const ok = eachar(this.deps, (t) => {
+      //   const a = t.a;
+      //   a.actualize();
+      //   return a.vid === t.v;
+      // });
+      // if (!ok) this.state = 3;
     }
 
     if (this.state === 3) {
       const mark = (this.mark = new Id());
       const prevDeps = this.deps;
-      this.deps = new Array(prevDeps.length || 100);
+      this.deps = new Array(prevDeps.length || 10);
       this.pdi = 0;
 
       if (!this.isObserved && runtime.currentAtom) {
@@ -85,14 +101,13 @@ export class DerivedAtom {
       // temp hack
       if (this.deps.length) this.deps.length = this.pdi;
 
-      let i = 0,
-        deps = prevDeps,
-        s = deps.length,
+      let deps = prevDeps,
+        i = deps.length,
         t,
         a;
 
-      while (i < s) {
-        a = deps[i++].a;
+      while (i--) {
+        a = deps[i].a;
         if (a.m !== mark) removeAtom(a, this);
         a.readFlag = false;
       }
@@ -103,12 +118,11 @@ export class DerivedAtom {
       //   a.readFlag = 0;
       // });
 
-      i = 0;
       deps = this.deps;
-      s = deps.length;
+      i = deps.length;
 
-      while (i < s) {
-        t = deps[i++];
+      while (i--) {
+        t = deps[i];
         a = t.a;
         a.m = t.t;
         if (a.readFlag) {
