@@ -51,35 +51,18 @@ export class DerivedAtom {
 
   actualize() {
     if (this.state === 1 || this.state === 2) {
-      this.recalc = false;
-
-      let deps = this.deps,
-        i = deps.length,
-        t,
-        a;
-
-      while (i--) {
-        t = deps[i];
-        a = t.a;
+      const ok = this.deps.every((t) => {
+        const a = t.a;
         a.actualize();
-        if (a.vid !== t.v) {
-          this.state = 3;
-          break;
-        }
-      }
-
-      // const ok = eachar(this.deps, (t) => {
-      //   const a = t.a;
-      //   a.actualize();
-      //   return a.vid === t.v;
-      // });
-      // if (!ok) this.state = 3;
+        return a.vid === t.v;
+      });
+      if (!ok) this.state = 3;
     }
 
     if (this.state === 3) {
       const mark = (this.mark = new Id());
       const prevDeps = this.deps;
-      this.deps = new Array(prevDeps.length || 10);
+      this.deps = [];
       this.pdi = 0;
 
       if (!this.isObserved && runtime.currentAtom) {
@@ -99,46 +82,22 @@ export class DerivedAtom {
       }
 
       // temp hack
-      if (this.deps.length) this.deps.length = this.pdi;
+      // if (this.deps.length) this.deps.length = this.pdi;
 
-      let deps = prevDeps,
-        i = deps.length,
-        t,
-        a;
-
-      while (i--) {
-        a = deps[i].a;
+      prevDeps.forEach((t) => {
+        const a = t.a;
         if (a.m !== mark) removeAtom(a, this);
         a.readFlag = false;
-      }
+      });
 
-      // eacha(prevDeps, (t) => {
-      //   const a = t.a;
-      //   if (a.m !== mark) removeAtom(a, this);
-      //   a.readFlag = 0;
-      // });
-
-      deps = this.deps;
-      i = deps.length;
-
-      while (i--) {
-        t = deps[i];
-        a = t.a;
+      this.deps.forEach((t) => {
+        const a = t.a;
         a.m = t.t;
         if (a.readFlag) {
           a.readFlag = false;
           a.subs.add(this);
         }
-      }
-
-      // eacha(this.deps, (t) => {
-      //   const a = t.a;
-      //   a.m = t.t;
-      //   if (a.readFlag) {
-      //     a.readFlag = 0;
-      //     a.subs.add(this);
-      //   }
-      // });
+      });
 
       if (!this.options.equals(nextValue, this.value)) {
         this.value = nextValue;
@@ -162,9 +121,9 @@ export class DerivedAtom {
       return;
     }
 
-    const ti = this.pdi++;
-    deps[ti] = { a, v: vid, t: am }; // literal is faster than class
-    // deps.push({ a, v: vid, t: am });
+    const ti = deps.length; // this.pdi++;
+    // deps[ti] = { a, v: vid, t: am }; // literal is faster than class
+    deps.push({ a, v: vid, t: am });
 
     a.m = mark;
     a.ti = ti;
@@ -178,7 +137,7 @@ export class DerivedAtom {
       if (onBUO) runtime.addEffect({ actualize: onBUO });
 
       // temp hack
-      this.deps.length = this.pdi;
+      // this.deps.length = this.pdi;
 
       this.deps.forEach((t) => removeAtom(t.a, this));
       this.deps.length = 0;
