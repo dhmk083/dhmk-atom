@@ -1,5 +1,5 @@
 import { ValueAtom } from "../atoms/value";
-import { ComputedAtom } from "../atoms/computed";
+import { DerivedAtom } from "../atoms/derived";
 
 const AS = Symbol();
 
@@ -26,7 +26,7 @@ export default function observableObject<T extends object>(
           let initialized;
           let getter = desc.get;
 
-          a = new ComputedAtom(() => {
+          a = new DerivedAtom(() => {
             let value = getter.call(r);
 
             if (!initialized) {

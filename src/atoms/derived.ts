@@ -1,73 +1,64 @@
 import { runtime } from "../runtime";
-import {
-  useAtom,
-  removeAtom,
-  each,
-  eacha,
-  eachar,
-  invalidateSubs,
-} from "../shared";
-import { ET, EID, defaultAtomOptions, Id, Track } from "../types";
+import { trackAtom, removeAtom, invalidateSubs } from "../shared";
+import { ET, EID, defaultAtomOptions, Id, Track, AtomState } from "../types";
 
 export class DerivedAtom {
   value;
   options;
   subs;
-  t;
   vid;
-  isObserved;
   state;
-  isEffect;
-  fn;
-  recalc;
-  deps;
-  dit;
-  dt;
-  mark;
   m;
   ti;
   readFlag;
-  pdi;
+  mark;
+  deps;
 
-  constructor(fn, isEffect, options) {
+  isObserved;
+  isEffect;
+  fn;
+
+  constructor(fn, isEffect = false, options?) {
     this.value = undefined;
     this.options = { ...defaultAtomOptions, ...options };
     this.subs = new Set();
     this.vid = EID;
+    this.state = AtomState.Stale;
     this.m = new Id();
     this.ti = 0;
     this.readFlag = false;
-    this.isObserved = isEffect;
+    this.mark = EID;
+    this.deps = [];
 
-    this.state = 3;
+    this.isObserved = isEffect;
     this.isEffect = isEffect;
     this.fn = fn;
-    this.recalc = false;
-
-    this.deps = [];
-    this.mark = EID;
-    this.pdi = 0;
   }
 
   actualize() {
-    if (this.state >= 4) {
+    const state0 = this.state;
+
+    if (state0 === AtomState.Actual) return;
+
+    if (state0 >= AtomState.Computing) {
       throw new Error("circular dependency");
     }
 
-    if (this.state === 1 || this.state === 2) {
+    if (state0 <= AtomState.PossiblyStale) {
       const ok = this.deps.every((t) => {
         const a = t.a;
         a.actualize();
         return a.vid === t.v;
       });
-      if (!ok) this.state = 3;
+      if (!ok) this.state = AtomState.Stale;
     }
 
-    if (this.state === 3) {
+    // state0 may be outdated below
+
+    if (this.state === AtomState.Stale) {
       const mark = (this.mark = new Id());
       const prevDeps = this.deps;
       this.deps = [];
-      this.pdi = 0;
 
       if (!this.isObserved && runtime.currentAtom) {
         this.isObserved = true;
@@ -79,7 +70,7 @@ export class DerivedAtom {
       runtime.currentAtom = this;
       let nextValue;
       try {
-        this.state = 4;
+        this.state = AtomState.Computing;
         nextValue = this.fn();
       } finally {
         runtime.currentAtom = prev;
@@ -107,8 +98,8 @@ export class DerivedAtom {
       }
     }
 
-    if (this.state === 4) this.state = 0;
-    else this.state = 1;
+    if (this.state === AtomState.Computing) this.state = AtomState.Actual;
+    else this.state = AtomState.InvalidatedWhileComputing;
   }
 
   track(a) {
@@ -138,13 +129,13 @@ export class DerivedAtom {
       this.deps.forEach((t) => removeAtom(t.a, this));
       this.deps.length = 0;
 
-      this.state = 3;
+      this.state = AtomState.Stale;
     }
   }
 
   get() {
     this.actualize();
-    useAtom(this);
+    trackAtom(this);
     return this.value;
   }
 

@@ -22,7 +22,7 @@ function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
   };
   ectrl.isInitial = true;
   ectrl.invalidate = () => {
-    ea.state = 3;
+    ea.state = AtomState.Stale;
     invalidateSubs(ea, false);
     runtime.addEffect(ea);
     runtime.runEffects();

@@ -1,5 +1,5 @@
 import { runtime } from "./runtime";
-import { Dependency, Id } from "./types";
+import { Dependency, Id, AtomState } from "./types";
 
 type WithObservers = {
   observers: Map<unknown, Id>;
@@ -14,7 +14,7 @@ export const removeAtom = (a, self: unknown) => {
   if (!a.subs.size) a.dispose();
 };
 
-export function useAtom(a) {
+export function trackAtom(a) {
   const ca = runtime.currentAtom;
   if (ca) ca.track(a);
 }
@@ -25,38 +25,19 @@ export function reportError(e: unknown) {
   };
 }
 
-export function each(it, fn) {
-  while (true) {
-    const { done, value } = it.next();
-    if (done) return true;
-    if (fn(value) === false) return false;
-  }
-}
-
-export function eacha(a, fn, i = 0, s = a.length) {
-  while (i < s) fn(a[i++]);
-}
-
-export function eachar(a, fn) {
-  let i = 0,
-    s = a.length;
-  while (i < s) if (fn(a[i++]) === false) return false;
-  return true;
-}
-
-export function invalidateSubs(atom, iv, s = 3) {
+export function invalidateSubs(atom, isValueAtom, newState = AtomState.Stale) {
   atom.subs.forEach((a) => {
-    if (iv && a.state === 4) {
+    if (isValueAtom && a.state === AtomState.Computing) {
       if (a.isEffect) runtime.addEffect(a);
-      a.state = 5;
+      a.state = AtomState.InvalidatedAndComputing;
       return;
     }
 
-    if (a.state >= s) return;
-    a.state = s;
+    if (a.state >= newState) return;
+    a.state = newState;
 
     if (a.isEffect) runtime.addEffect(a);
 
-    a.subs.size && invalidateSubs(a, iv, 2);
+    a.subs.size && invalidateSubs(a, isValueAtom, AtomState.PossiblyStale);
   });
 }

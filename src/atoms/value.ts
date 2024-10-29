@@ -1,4 +1,4 @@
-import { useAtom, invalidateSubs } from "../shared";
+import { trackAtom, invalidateSubs } from "../shared";
 import {
   AtomOptions,
   _AtomOptions,
@@ -47,7 +47,7 @@ export class ValueAtom<T> {
   actualize() {}
 
   get() {
-    useAtom(this);
+    trackAtom(this);
 
     if (!this.isObserved && runtime.currentAtom) {
       this.isObserved = true;

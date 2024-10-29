@@ -20,8 +20,11 @@ export interface Dependency {
 
 export enum AtomState {
   Actual,
+  InvalidatedWhileComputing,
   PossiblyStale,
   Stale,
+  Computing,
+  InvalidatedAndComputing,
 }
 
 export type Atom = {
