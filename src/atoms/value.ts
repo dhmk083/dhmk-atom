@@ -1,4 +1,4 @@
-import { useAtom, invalidate } from "../shared";
+import { useAtom, invalidateSubs } from "../shared";
 import {
   AtomOptions,
   _AtomOptions,
@@ -41,7 +41,7 @@ export class ValueAtom<T> {
 
     this.value = x;
     this.vid = new Id();
-    invalidate(this.subs, 3, true);
+    invalidateSubs(this, true);
   }
 
   actualize() {}

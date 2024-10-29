@@ -5,7 +5,7 @@ import {
   each,
   eacha,
   eachar,
-  invalidate,
+  invalidateSubs,
 } from "../shared";
 import { ET, EID, defaultAtomOptions, Id, Track } from "../types";
 
@@ -50,6 +50,10 @@ export class DerivedAtom {
   }
 
   actualize() {
+    if (this.state >= 4) {
+      throw new Error("circular dependency");
+    }
+
     if (this.state === 1 || this.state === 2) {
       const ok = this.deps.every((t) => {
         const a = t.a;
@@ -81,9 +85,6 @@ export class DerivedAtom {
         runtime.currentAtom = prev;
       }
 
-      // temp hack
-      // if (this.deps.length) this.deps.length = this.pdi;
-
       prevDeps.forEach((t) => {
         const a = t.a;
         if (a.m !== mark) removeAtom(a, this);
@@ -102,7 +103,7 @@ export class DerivedAtom {
       if (!this.options.equals(nextValue, this.value)) {
         this.value = nextValue;
         this.vid = new Id();
-        invalidate(this.subs, 3, false);
+        invalidateSubs(this, false);
       }
     }
 
@@ -121,13 +122,11 @@ export class DerivedAtom {
       return;
     }
 
-    const ti = deps.length; // this.pdi++;
-    // deps[ti] = { a, v: vid, t: am }; // literal is faster than class
-    deps.push({ a, v: vid, t: am });
-
     a.m = mark;
-    a.ti = ti;
+    a.ti = deps.length;
     a.readFlag = true;
+
+    deps.push({ a, v: vid, t: am }); // literal is faster than class
   }
 
   dispose() {
@@ -135,9 +134,6 @@ export class DerivedAtom {
       this.isObserved = false;
       const onBUO = this.options.onBecomeUnobserved;
       if (onBUO) runtime.addEffect({ actualize: onBUO });
-
-      // temp hack
-      // this.deps.length = this.pdi;
 
       this.deps.forEach((t) => removeAtom(t.a, this));
       this.deps.length = 0;

@@ -44,11 +44,11 @@ export function eachar(a, fn) {
   return true;
 }
 
-export function invalidate(as, s, iv) {
-  as.forEach((_, a) => {
+export function invalidateSubs(atom, iv, s = 3) {
+  atom.subs.forEach((a) => {
     if (iv && a.state === 4) {
       if (a.isEffect) runtime.addEffect(a);
-      a.state = 1;
+      a.state = 5;
       return;
     }
 
@@ -57,6 +57,6 @@ export function invalidate(as, s, iv) {
 
     if (a.isEffect) runtime.addEffect(a);
 
-    a.subs.size && invalidate(a.subs, 2, iv);
+    a.subs.size && invalidateSubs(a, iv, 2);
   });
 }

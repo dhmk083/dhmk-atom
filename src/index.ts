@@ -2,7 +2,7 @@ import { ValueAtom } from "./atoms/value";
 import { DerivedAtom } from "./atoms/derived";
 import { runtime } from "./runtime";
 import { AtomOptions, AtomState, EffectAtomOptions } from "./types";
-import { invalidate } from "./shared";
+import { invalidateSubs } from "./shared";
 import observable from "./observable";
 import observableObject, { as } from "./observable/object";
 import observableArray from "./observable/array";
@@ -23,7 +23,7 @@ function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
   ectrl.isInitial = true;
   ectrl.invalidate = () => {
     ea.state = 3;
-    invalidate(ea.subs, 3, false);
+    invalidateSubs(ea, false);
     runtime.addEffect(ea);
     runtime.runEffects();
   };
