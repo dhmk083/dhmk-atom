@@ -2,7 +2,6 @@ import { ValueAtom } from "./atoms/value";
 import { DerivedAtom } from "./atoms/derived";
 import { runtime } from "./runtime";
 import { AtomOptions, AtomState, EffectAtomOptions } from "./types";
-import { invalidateSubs } from "./shared";
 import observable from "./observable";
 import observableObject, { as } from "./observable/object";
 import observableArray from "./observable/array";
@@ -12,30 +11,37 @@ type EffectState = {
   (): void;
 
   isInitial: boolean;
+  isDisposed: boolean;
   invalidate(): void;
 };
 
 function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
   const ectrl: EffectState = () => {
-    ea.dispose();
+    ectrl.isDisposed = true;
+
+    runtime.addEffect({ actualize: ea.dispose.bind(ea) });
     runtime.runEffects();
   };
   ectrl.isInitial = true;
+  ectrl.isDisposed = false;
   ectrl.invalidate = () => {
+    if (ectrl.isDisposed) return;
+
     ea.state = AtomState.Stale;
-    invalidateSubs(ea, false);
     runtime.addEffect(ea);
     runtime.runEffects();
   };
 
   const efn = () => {
-    fn(ectrl);
+    !ectrl.isDisposed && fn(ectrl);
     ectrl.isInitial = false;
   };
 
   const ea = new DerivedAtom(efn, true, opts);
-  const origac = ea.actualize.bind(ea);
-  if (opts?.scheduler) ea.actualize = () => opts.scheduler!(origac);
+  if (opts?.scheduler) {
+    const actualize = ea.actualize.bind(ea);
+    ea.actualize = () => opts.scheduler!(actualize);
+  }
   const onBO = opts?.onBecomeObserved;
   if (onBO) runtime.addEffect({ actualize: onBO });
   runtime.addEffect(ea);
