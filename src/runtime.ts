@@ -1,4 +1,5 @@
 import { Dependency, Id } from "./types";
+import { thrower } from "./shared";
 
 type Effect = { actualize(): void };
 
@@ -27,8 +28,12 @@ export const runtime = {
     runtime.counter++;
 
     runtime.effects.forEach((x) => {
-      runtime.effects.delete(x);
-      x.actualize();
+      try {
+        runtime.effects.delete(x);
+        x.actualize();
+      } catch (e) {
+        setTimeout(thrower(e));
+      }
     });
 
     runtime.counter--;

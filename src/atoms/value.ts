@@ -2,12 +2,8 @@ import { trackAtom, invalidateSubs } from "../shared";
 import {
   AtomOptions,
   _AtomOptions,
-  AtomState,
-  Atom,
   Id,
   defaultAtomOptions,
-  Track,
-  ET,
   EID,
 } from "../types";
 import { runtime } from "../runtime";

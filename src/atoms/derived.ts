@@ -1,6 +1,6 @@
 import { runtime } from "../runtime";
-import { trackAtom, removeAtom, invalidateSubs } from "../shared";
-import { ET, EID, defaultAtomOptions, Id, Track, AtomState } from "../types";
+import { trackAtom, removeAtom, invalidateSubs, thrower } from "../shared";
+import { EID, defaultAtomOptions, Id, AtomState } from "../types";
 
 export class DerivedAtom {
   value;
@@ -16,6 +16,7 @@ export class DerivedAtom {
 
   isObserved;
   isEffect;
+  isError;
   fn;
 
   constructor(fn, isEffect = false, options?) {
@@ -32,6 +33,7 @@ export class DerivedAtom {
 
     this.isObserved = isEffect;
     this.isEffect = isEffect;
+    this.isError = false;
     this.fn = fn;
   }
 
@@ -69,12 +71,19 @@ export class DerivedAtom {
       const prev = runtime.currentAtom;
       runtime.currentAtom = this;
       let nextValue;
+      let isError = false;
       try {
         this.state = AtomState.Computing;
         nextValue = this.fn();
-      } finally {
-        runtime.currentAtom = prev;
+      } catch (e) {
+        if (this.isEffect) {
+          runtime.addEffect({ actualize: thrower(e) });
+        } else {
+          nextValue = e;
+          isError = true;
+        }
       }
+      runtime.currentAtom = prev;
 
       prevDeps.forEach((t) => {
         const a = t.a;
@@ -93,6 +102,7 @@ export class DerivedAtom {
 
       if (!this.options.equals(nextValue, this.value)) {
         this.value = nextValue;
+        this.isError = isError;
         this.vid = new Id();
         invalidateSubs(this, false);
       }
@@ -136,6 +146,8 @@ export class DerivedAtom {
   get() {
     this.actualize();
     trackAtom(this);
+
+    if (this.isError) throw this.value;
     return this.value;
   }
 

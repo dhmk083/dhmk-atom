@@ -19,7 +19,7 @@ export function trackAtom(a) {
   if (ca) ca.track(a);
 }
 
-export function reportError(e: unknown) {
+export function thrower(e: unknown) {
   return () => {
     throw e;
   };
