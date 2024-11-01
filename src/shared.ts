@@ -28,7 +28,7 @@ export function thrower(e: unknown) {
 export function invalidateSubs(atom, isValueAtom, newState = AtomState.Stale) {
   atom.subs.forEach((a) => {
     if (isValueAtom && a.state === AtomState.Computing) {
-      if (a.isEffect) runtime.addEffect(a);
+      if (a.isEffect) runtime.addEffect(a.run);
       a.state = AtomState.InvalidatedAndComputing;
       return;
     }
@@ -36,7 +36,7 @@ export function invalidateSubs(atom, isValueAtom, newState = AtomState.Stale) {
     if (a.state >= newState) return;
     a.state = newState;
 
-    if (a.isEffect) runtime.addEffect(a);
+    if (a.isEffect) runtime.addEffect(a.run);
 
     a.subs.size && invalidateSubs(a, isValueAtom, AtomState.PossiblyStale);
   });

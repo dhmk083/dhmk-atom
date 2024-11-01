@@ -2,6 +2,8 @@ import { runtime } from "../runtime";
 import { trackAtom, removeAtom, invalidateSubs, thrower } from "../shared";
 import { EID, defaultAtomOptions, Id, AtomState } from "../types";
 
+const call = (x) => x();
+
 export class DerivedAtom {
   value;
   options;
@@ -35,6 +37,17 @@ export class DerivedAtom {
     this.isEffect = isEffect;
     this.isError = false;
     this.fn = fn;
+
+    if (this.isEffect) {
+      const actualize = this.actualize.bind(this);
+      const scheduler = options?.scheduler ?? call;
+      this.run = () => scheduler(actualize);
+    }
+  }
+
+  run() {
+    // only for effects
+    // effects should override this
   }
 
   actualize() {
@@ -65,7 +78,7 @@ export class DerivedAtom {
       if (!this.isObserved && runtime.currentAtom) {
         this.isObserved = true;
         const onBO = this.options.onBecomeObserved;
-        if (onBO) runtime.addEffect({ actualize: onBO });
+        if (onBO) runtime.addEffect(onBO);
       }
 
       const prev = runtime.currentAtom;
@@ -77,7 +90,7 @@ export class DerivedAtom {
         nextValue = this.fn();
       } catch (e) {
         if (this.isEffect) {
-          runtime.addEffect({ actualize: thrower(e) });
+          runtime.addEffect(thrower(e));
         } else {
           nextValue = e;
           isError = true;
@@ -134,7 +147,7 @@ export class DerivedAtom {
     if (this.isObserved) {
       this.isObserved = false;
       const onBUO = this.options.onBecomeUnobserved;
-      if (onBUO) runtime.addEffect({ actualize: onBUO });
+      if (onBUO) runtime.addEffect(onBUO);
 
       this.deps.forEach((t) => removeAtom(t.a, this));
       this.deps.length = 0;

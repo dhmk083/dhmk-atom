@@ -48,7 +48,7 @@ export class ValueAtom<T> {
     if (!this.isObserved && runtime.currentAtom) {
       this.isObserved = true;
       const onBO = this.options.onBecomeObserved;
-      if (onBO) runtime.addEffect({ actualize: onBO });
+      if (onBO) runtime.addEffect(onBO);
     }
 
     return this.value;
@@ -62,7 +62,7 @@ export class ValueAtom<T> {
     if (this.isObserved) {
       this.isObserved = false;
       const onBUO = this.options.onBecomeUnobserved;
-      if (onBUO) runtime.addEffect({ actualize: onBUO });
+      if (onBUO) runtime.addEffect(onBUO);
     }
   }
 }

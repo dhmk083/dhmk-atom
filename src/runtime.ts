@@ -1,19 +1,9 @@
-import { Dependency, Id } from "./types";
 import { thrower } from "./shared";
 
-type Effect = { actualize(): void };
-
-interface CurrentAtom {
-  runId: Id;
-  deps: Dependency[];
-  prevDeps: Dependency[];
-  prevDepsIndex: number;
-  isObserved: boolean;
-  depsForUnobserved: Set<Dependency>;
-}
+type Effect = () => void;
 
 export const runtime = {
-  currentAtom: undefined as any | undefined,
+  currentAtom: undefined as any,
   counter: 0,
   requireAction: true,
   effects: new Set<Effect>(),
@@ -27,10 +17,10 @@ export const runtime = {
 
     runtime.counter++;
 
-    runtime.effects.forEach((x) => {
+    runtime.effects.forEach((fn) => {
       try {
-        runtime.effects.delete(x);
-        x.actualize();
+        runtime.effects.delete(fn);
+        fn();
       } catch (e) {
         setTimeout(thrower(e));
       }

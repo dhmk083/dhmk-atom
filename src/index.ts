@@ -19,7 +19,7 @@ function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
   const ectrl: EffectState = () => {
     ectrl.isDisposed = true;
 
-    runtime.addEffect({ actualize: ea.dispose.bind(ea) });
+    runtime.addEffect(ea.dispose.bind(ea));
     runtime.runEffects();
   };
   ectrl.isInitial = true;
@@ -28,7 +28,7 @@ function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
     if (ectrl.isDisposed) return;
 
     ea.state = AtomState.Stale;
-    runtime.addEffect(ea);
+    runtime.addEffect(ea.run);
     runtime.runEffects();
   };
 
@@ -38,13 +38,9 @@ function observe(fn: (state: EffectState) => void, opts?: EffectAtomOptions) {
   };
 
   const ea = new DerivedAtom(efn, true, opts);
-  if (opts?.scheduler) {
-    const actualize = ea.actualize.bind(ea);
-    ea.actualize = () => opts.scheduler!(actualize);
-  }
   const onBO = opts?.onBecomeObserved;
-  if (onBO) runtime.addEffect({ actualize: onBO });
-  runtime.addEffect(ea);
+  if (onBO) runtime.addEffect(onBO);
+  runtime.addEffect(ea.run);
   runtime.runEffects();
 
   return ectrl;
