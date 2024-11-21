@@ -4,6 +4,17 @@ import { EID, defaultAtomOptions, Id, AtomState } from "../types";
 
 const call = (x) => x();
 
+function each(it, fn) {
+  let x = it.next();
+
+  while (!x.done) {
+    if (fn(x.value) === false) return false;
+    x = it.next();
+  }
+
+  return true;
+}
+
 export class DerivedAtom {
   value;
   options;
@@ -15,6 +26,8 @@ export class DerivedAtom {
   readFlag;
   mark;
   deps;
+  pit;
+  pt;
 
   isObserved;
   isEffect;
@@ -31,7 +44,9 @@ export class DerivedAtom {
     this.ti = 0;
     this.readFlag = false;
     this.mark = EID;
-    this.deps = [];
+    this.deps = new Map();
+    this.pit = this.deps.values();
+    this.pt = this.pit.next().value;
 
     this.isObserved = isEffect;
     this.isEffect = isEffect;
@@ -60,7 +75,7 @@ export class DerivedAtom {
     }
 
     if (state0 <= AtomState.PossiblyStale) {
-      const ok = this.deps.every((t) => {
+      const ok = each(this.deps.values(), (t) => {
         const a = t.a;
         a.actualize();
         return a.vid === t.v;
@@ -72,8 +87,9 @@ export class DerivedAtom {
 
     if (this.state === AtomState.Stale) {
       const mark = (this.mark = new Id());
-      const prevDeps = this.deps;
-      this.deps = [];
+      const deps = this.deps;
+      this.pit = deps.values();
+      this.pt = this.pit.next().value;
 
       if (!this.isObserved && runtime.currentAtom) {
         this.isObserved = true;
@@ -98,18 +114,10 @@ export class DerivedAtom {
       }
       runtime.currentAtom = prev;
 
-      prevDeps.forEach((t) => {
-        const a = t.a;
-        if (a.m !== mark) removeAtom(a, this);
-        a.readFlag = false;
-      });
-
-      this.deps.forEach((t) => {
-        const a = t.a;
-        a.m = t.t;
-        if (a.readFlag) {
-          a.readFlag = false;
-          a.subs.add(this);
+      each(deps.values(), (t) => {
+        if (t.m !== mark) {
+          deps.delete(t.a);
+          t.a.subs.delete(this);
         }
       });
 
@@ -126,21 +134,39 @@ export class DerivedAtom {
   }
 
   track(a) {
-    const am = a.m;
-    const mark = this.mark;
-    const vid = a.vid;
-    const deps = this.deps;
+    const m = this.mark;
+    const v = a.vid;
 
-    if (am === mark) {
-      deps[a.ti].v = vid;
+    if (a.m === m) {
+      a.ti.v = v;
+      return;
+    }
+    a.m = m;
+
+    const pt = this.pt;
+
+    if (pt && pt === a) {
+      pt.m = m;
+      pt.v = v;
+      a.ti = pt;
+      this.pt = this.pit.next().value;
       return;
     }
 
-    a.m = mark;
-    a.ti = deps.length;
-    a.readFlag = true;
+    const deps = this.deps;
 
-    deps.push({ a, v: vid, t: am }); // literal is faster than class
+    let t = deps.get(a);
+    if (!t) {
+      a.subs.add(this);
+
+      t = { a, m, v };
+      deps.set(a, t);
+    } else {
+      t.m = m;
+    }
+
+    t.v = v;
+    a.ti = t;
   }
 
   dispose() {
@@ -150,7 +176,7 @@ export class DerivedAtom {
       if (onBUO) runtime.addEffect(onBUO);
 
       this.deps.forEach((t) => removeAtom(t.a, this));
-      this.deps.length = 0;
+      this.deps.clear();
 
       this.state = AtomState.Stale;
     }

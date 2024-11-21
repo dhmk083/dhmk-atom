@@ -24,7 +24,7 @@ export class ValueAtom<T> {
     this.subs = new Set();
     this.vid = EID;
     this.m = EID;
-    this.ti = 0;
+    this.ti = undefined;
     this.readFlag = false;
     this.isObserved = false;
   }
