@@ -11,7 +11,7 @@ export class DerivedAtom {
   vid;
   state;
   m;
-  ti;
+  tr;
   readFlag;
   mark;
   deps;
@@ -28,7 +28,7 @@ export class DerivedAtom {
     this.vid = EID;
     this.state = AtomState.Stale;
     this.m = EID;
-    this.ti = 0;
+    this.tr = undefined;
     this.readFlag = false;
     this.mark = EID;
     this.deps = [];
@@ -126,21 +126,22 @@ export class DerivedAtom {
   }
 
   track(a) {
-    const am = a.m;
     const mark = this.mark;
-    const vid = a.vid;
-    const deps = this.deps;
+    const t = a.m;
+    const v = a.vid;
 
-    if (am === mark) {
-      deps[a.ti].v = vid;
+    if (t === mark) {
+      a.tr.v = v;
       return;
     }
 
+    const tr = { a, v, t }; // literal is faster than class
+
     a.m = mark;
-    a.ti = deps.length;
+    a.tr = tr;
     a.readFlag = true;
 
-    deps.push({ a, v: vid, t: am }); // literal is faster than class
+    this.deps.push(tr);
   }
 
   dispose() {
