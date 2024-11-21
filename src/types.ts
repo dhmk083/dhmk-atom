@@ -4,14 +4,6 @@ export class Id {
 
 export const EID = new Id();
 
-export interface Dependency {
-  actualize(): void;
-  dispose(): void;
-  observers: Map<unknown, Id>;
-  versionId: Id;
-  runId: Id;
-}
-
 export enum AtomState {
   Actual,
   InvalidatedWhileComputing,
@@ -20,10 +12,6 @@ export enum AtomState {
   Computing,
   InvalidatedAndComputing,
 }
-
-export type Atom = {
-  invalidate(state: AtomState, isValueAtom: boolean): void;
-};
 
 export type _AtomOptions<T> = {
   equals(next: T, prev: T): boolean;

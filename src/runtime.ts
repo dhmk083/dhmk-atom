@@ -3,13 +3,32 @@ import { thrower } from "./shared";
 type Effect = () => void;
 
 export const runtime = {
+  //private
+
   currentAtom: undefined as any,
   counter: 0,
-  requireAction: true,
   effects: new Set<Effect>(),
+  isScheduled: false,
 
   addEffect(x: Effect) {
     runtime.effects.add(x);
+  },
+
+  scheduleRun() {
+    if (!runtime.isScheduled) {
+      runtime.isScheduled = true;
+      Promise.resolve().then(() => {
+        runtime.isScheduled = false;
+        runtime.runEffects();
+      });
+    }
+  },
+
+  // public
+
+  queueEffect(x: Effect) {
+    runtime.addEffect(x);
+    runtime.scheduleRun();
   },
 
   runEffects() {
@@ -29,7 +48,7 @@ export const runtime = {
     runtime.counter--;
   },
 
-  act<T>(fn: () => T) {
+  untracked<T>(fn: () => T) {
     const prevAtom = runtime.currentAtom;
     runtime.currentAtom = undefined;
     runtime.counter++;
@@ -39,7 +58,6 @@ export const runtime = {
     } finally {
       runtime.counter--;
       runtime.currentAtom = prevAtom;
-      runtime.runEffects();
     }
   },
 };

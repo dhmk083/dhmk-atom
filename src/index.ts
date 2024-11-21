@@ -77,19 +77,20 @@ function atom(x, opts?) {
   return self;
 }
 
-const { act } = runtime;
-const untracked = act;
+const { untracked, queueEffect, runEffects } = runtime;
 
 export {
   ValueAtom,
   DerivedAtom,
   atom,
-  act,
-  untracked,
   observe,
   observable,
   observableObject,
   observableArray,
   as,
+  untracked,
+  untracked as batch,
+  queueEffect,
+  runEffects,
   runtime, // debug
 };

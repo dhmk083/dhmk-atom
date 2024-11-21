@@ -27,7 +27,7 @@ export class DerivedAtom {
     this.subs = new Set();
     this.vid = EID;
     this.state = AtomState.Stale;
-    this.m = new Id();
+    this.m = EID;
     this.ti = 0;
     this.readFlag = false;
     this.mark = EID;

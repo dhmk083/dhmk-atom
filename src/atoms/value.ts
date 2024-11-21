@@ -23,21 +23,19 @@ export class ValueAtom<T> {
     this.options = { ...defaultAtomOptions, ...options };
     this.subs = new Set();
     this.vid = EID;
-    this.m = new Id();
+    this.m = EID;
     this.ti = 0;
     this.readFlag = false;
     this.isObserved = false;
   }
 
   set(x: T) {
-    if (runtime.requireAction && !runtime.counter)
-      throw new Error("Attempted to set atom value outside action.");
-
     if (this.options.equals(x, this.value)) return;
 
     this.value = x;
     this.vid = new Id();
     invalidateSubs(this, true);
+    runtime.scheduleRun();
   }
 
   actualize() {}

@@ -1,4 +1,6 @@
-import { atom, observe, act } from "./";
+import { atom, observe, runEffects, batch } from "./";
+
+const nextTick = () => new Promise(process.nextTick);
 
 describe("atom", () => {
   test("basic", () => {
@@ -8,7 +10,7 @@ describe("atom", () => {
     expect(a()).toEqual(1);
     expect(b()).toEqual(2);
 
-    act(() => a.set(2));
+    a.set(2);
 
     expect(a()).toEqual(2);
     expect(b()).toEqual(3);
@@ -25,20 +27,20 @@ describe("atom", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    act(() => a.set(3)); // b = 1
+    a.set(3); // b = 1
     c();
 
     expect(spy).toBeCalledTimes(1);
 
-    act(() => a.set(5)); // b = 0
+    a.set(5); // b = 0
     c();
-    act(() => a.set(6)); // b = 0
+    a.set(6); // b = 0
     c();
 
     expect(spy).toBeCalledTimes(2);
   });
 
-  test("diamond", () => {
+  test("diamond", async () => {
     const computeSpy = jest.fn();
     const observeSpy = jest.fn();
     const a = atom(1);
@@ -58,14 +60,15 @@ describe("atom", () => {
     expect(computeSpy).toBeCalledTimes(1);
     expect(observeSpy).toBeCalledTimes(1);
 
-    act(() => a.set(2));
+    a.set(2);
+    await nextTick();
 
     expect(d()).toEqual(23);
     expect(computeSpy).toBeCalledTimes(2);
     expect(observeSpy).toBeCalledTimes(2);
   });
 
-  test("onBO/onBUO", () => {
+  test("onBO/onBUO", async () => {
     const onBOspy = jest.fn();
     const onBUOspy = jest.fn();
     const a = atom(1, {
@@ -77,7 +80,8 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(0);
 
     // irrelevant
-    act(() => a.set(2));
+    a.set(2);
+    await nextTick();
 
     expect(onBOspy).toBeCalledTimes(0);
     expect(onBUOspy).toBeCalledTimes(0);
@@ -89,7 +93,8 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(0);
 
     // irrelevant
-    act(() => a.set(3));
+    a.set(3);
+    await nextTick();
 
     expect(onBOspy).toBeCalledTimes(1);
     expect(onBUOspy).toBeCalledTimes(0);
@@ -107,7 +112,8 @@ describe("atom", () => {
     expect(onBUOspy).toBeCalledTimes(1);
 
     // irrelevant
-    act(() => a.set(4));
+    () => a.set(4);
+    await nextTick();
 
     expect(onBOspy).toBeCalledTimes(1);
     expect(onBUOspy).toBeCalledTimes(1);
@@ -127,7 +133,7 @@ describe("atom", () => {
 });
 
 describe("observe", () => {
-  test("basic", () => {
+  test("basic", async () => {
     const a = atom(1);
     const b = atom(2);
     const spy = jest.fn();
@@ -138,13 +144,15 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    act(() => a.set(2));
-    act(() => b.set(3));
+    a.set(2);
+    await nextTick();
+    b.set(3);
+    await nextTick();
 
     expect(spy).toBeCalledTimes(3);
   });
 
-  test("re-runs if atoms changed in-flight", () => {
+  test("re-runs if atoms changed in-flight", async () => {
     const a = atom(0);
     const spy = jest.fn();
 
@@ -155,7 +163,8 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    act(() => a.set(1));
+    a.set(1);
+    await nextTick();
     expect(spy).toBeCalledTimes(3);
 
     const spy2 = jest.fn();
@@ -170,11 +179,12 @@ describe("observe", () => {
 
     expect(spy2).toBeCalledTimes(1);
 
-    act(() => a.set(3));
+    a.set(3);
+    await nextTick();
     expect(spy2).toBeCalledTimes(2);
   });
 
-  test("dispose", () => {
+  test("dispose", async () => {
     const a = atom(1);
     const spy = jest.fn();
 
@@ -184,8 +194,10 @@ describe("observe", () => {
       spy();
     });
 
-    act(() => a.set(2));
-    act(() => a.set(3));
+    a.set(2);
+    await nextTick();
+    a.set(3);
+    await nextTick();
     expect(spy).toBeCalledTimes(1);
 
     const d = observe(() => {
@@ -194,8 +206,10 @@ describe("observe", () => {
     });
 
     d();
-    act(() => a.set(4));
-    act(() => a.set(5));
+    a.set(4);
+    await nextTick();
+    a.set(5);
+    await nextTick();
     expect(spy).toBeCalledTimes(2);
   });
 
@@ -214,8 +228,8 @@ describe("observe", () => {
     );
 
     expect(spy).toBeCalledTimes(0);
-    act(() => a.set(2));
-    await null;
+    a.set(2);
+    await nextTick;
     expect(spy).toBeCalledTimes(1);
   });
 
@@ -229,19 +243,20 @@ describe("observe", () => {
 
     expect(spy).toBeCalledTimes(1);
 
-    act(() => {
+    batch(() => {
       d.invalidate(/*false*/);
       expect(spy).toBeCalledTimes(1);
 
       d.invalidate(/*true*/);
       expect(spy).toBeCalledTimes(1);
     });
+    runEffects();
 
     expect(spy).toBeCalledTimes(2);
   });
 });
 
-test("action", () => {
+test("action", async () => {
   const a = atom(1);
   const b = atom(2);
   const spy = jest.fn();
@@ -252,10 +267,9 @@ test("action", () => {
 
   expect(spy).toBeCalledTimes(1);
 
-  act(() => {
-    a.set(2);
-    b.set(3);
-  });
+  a.set(2);
+  b.set(3);
+  await nextTick();
 
   expect(spy).toBeCalledTimes(2);
 });

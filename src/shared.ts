@@ -1,18 +1,10 @@
 import { runtime } from "./runtime";
-import { Dependency, Id, AtomState } from "./types";
+import { AtomState } from "./types";
 
-type WithObservers = {
-  observers: Map<unknown, Id>;
-};
-
-type Disposable = {
-  dispose(): void;
-};
-
-export const removeAtom = (a, self: unknown) => {
+export function removeAtom(a, self) {
   a.subs.delete(self);
   if (!a.subs.size) a.dispose();
-};
+}
 
 export function trackAtom(a) {
   const ca = runtime.currentAtom;
