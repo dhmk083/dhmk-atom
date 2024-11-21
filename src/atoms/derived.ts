@@ -15,6 +15,8 @@ export class DerivedAtom {
   readFlag;
   mark;
   deps;
+  prevDeps;
+  pdi;
 
   isObserved;
   isEffect;
@@ -72,7 +74,8 @@ export class DerivedAtom {
 
     if (this.state === AtomState.Stale) {
       const mark = (this.mark = new Id());
-      const prevDeps = this.deps;
+      this.prevDeps = this.deps;
+      this.pdi = 0;
       this.deps = [];
 
       if (!this.isObserved && runtime.currentAtom) {
@@ -98,11 +101,11 @@ export class DerivedAtom {
       }
       runtime.currentAtom = prev;
 
-      prevDeps.forEach((t) => {
-        const a = t.a;
+      for (let i = this.pdi, d = this.prevDeps, s = d.length; i < s; i++) {
+        const a = d[i].a;
         if (a.m !== mark) removeAtom(a, this);
         a.readFlag = false;
-      });
+      }
 
       this.deps.forEach((t) => {
         const a = t.a;
@@ -133,6 +136,13 @@ export class DerivedAtom {
     if (t === mark) {
       a.tr.v = v;
       return;
+    }
+
+    const pd = this.prevDeps;
+    const pdi = this.pdi;
+
+    if (pdi < pd.length && pd[pdi].a === a) {
+      this.pdi++;
     }
 
     const tr = { a, v, t }; // literal is faster than class
